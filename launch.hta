@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Question Detector - Launcher</title>
+<HTA:APPLICATION
+  ID="QuestionDetectorLauncher"
+  APPLICATIONNAME="Question Detector Launcher"
+  SINGLEINSTANCE="yes"
+  BORDER="thin"
+  CAPTION="yes"
+  SCROLL="no"
+  WINDOWSTATE="normal"
+/>
+<style>
+  body { font-family: "Segoe UI", Arial, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
+  h1 { font-size: 20px; margin: 0 0 6px 0; }
+  p { font-size: 13px; color: #94a3b8; margin: 0 0 16px 0; }
+  button { display: block; width: 100%; margin: 8px 0; padding: 12px; font-size: 14px;
+           background: #1e293b; color: #93c5fd; border: 1px solid #334155; border-radius: 8px; cursor: pointer; }
+  button:hover { background: #334155; }
+  .note { font-size: 11px; color: #64748b; margin-top: 12px; }
+</style>
+<script language="VBScript">
+  Dim oShell
+  Set oShell = CreateObject("WScript.Shell")
+
+  Function ProjectFolder()
+    Dim sPath
+    sPath = Replace(Document.location.pathname, "/", "\")
+    If Left(sPath, 1) = "\" Then sPath = Mid(sPath, 2)
+    sPath = UnEscape(sPath)
+    ProjectFolder = CreateObject("Scripting.FileSystemObject").GetParentFolderName(sPath)
+  End Function
+
+  Function Q(s)
+    Q = Chr(34) & s & Chr(34)
+  End Function
+
+  Sub OpenMain()
+    oShell.Run Q(ProjectFolder() & "\Question Detector.html"), 1, False
+  End Sub
+
+  Sub StartServer()
+    oShell.Run "cmd /k cd /d " & Q(ProjectFolder()) & " && node server.js", 1, False
+  End Sub
+
+  Sub OpenApp()
+    oShell.Run "http://localhost:3000", 1, False
+  End Sub
+
+  Sub OpenFolder()
+    oShell.Run Q(ProjectFolder()), 1, False
+  End Sub
+</script>
+</head>
+<body>
+  <h1>Classroom Copilot (Question Detector)</h1>
+  <p>Speech-to-answer widget. Main file: Question Detector.html. Node proxy (server.js) needed for AI answers.</p>
+  <button onclick="StartServer">1. Start Server (node server.js)</button>
+  <button onclick="OpenApp">2. Open App (localhost:3000)</button>
+  <button onclick="OpenMain">3. Open Main File (Question Detector.html)</button>
+  <button onclick="OpenFolder">4. Open Project Folder</button>
+  <div class="note">Start the server first, then open localhost:3000. Without the server you still get offline fallback answers.</div>
+</body>
+</html>

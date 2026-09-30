@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Classroom Copilot - Question Detector AI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --card-bg: rgba(30, 41, 59, 0.85);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --accent: #10b981;
+      --warning: #f59e0b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --q-bg: rgba(59, 130, 246, 0.15);
+      --q-border: #3b82f6;
+      --a-bg: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(59, 130, 246, 0.2));
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 20px;
+    }
+
+    #widget {
+      width: 100%;
+      max-width: 500px;
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .title {
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #60a5fa, #a7f3d0);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .model-badge {
+      font-size: 11px;
+      background: rgba(59, 130, 246, 0.2);
+      color: #93c5fd;
+      padding: 3px 8px;
+      border-radius: 12px;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    #transcript {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      min-height: 70px;
+      max-height: 100px;
+      overflow-y: auto;
+      margin-bottom: 14px;
+      color: #cbd5e1;
+    }
+
+    #questionBox {
+      background: var(--q-bg);
+      border-left: 4px solid var(--q-border);
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 13px;
+      margin-bottom: 10px;
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    #questionBox .label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #60a5fa;
+      margin-bottom: 4px;
+    }
+
+    #answerBox {
+      background: var(--a-bg);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 14px;
+      display: none;
+      animation: fadeIn 0.4s ease;
+    }
+
+    #answerBox.show {
+      display: block;
+    }
+
+    #answerBox .label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #34d399;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background-color: #10b981;
+      border-radius: 50%;
+      display: inline-block;
+      animation: pulse 1.2s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(0.8); opacity: 0.5; }
+      50% { transform: scale(1.2); opacity: 1; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    button {
+      flex: 1;
+      padding: 12px;
+      border-radius: 12px;
+      border: none;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    #toggleBtn {
+      background: var(--primary);
+      color: white;
+    }
+
+    #toggleBtn:hover {
+      background: var(--primary-hover);
+    }
+
+    #toggleBtn.listening {
+      background: #ef4444;
+    }
+
+    #toggleBtn.listening:hover {
+      background: #dc2626;
+    }
+
+    #clearBtn {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      border: 1px solid var(--card-border);
+      flex: 0 0 100px;
+    }
+
+    #clearBtn:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .test-input-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .test-input-group input {
+      flex: 1;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 8px 12px;
+      color: white;
+      font-size: 12px;
+      outline: none;
+    }
+
+    .test-input-group input:focus {
+      border-color: var(--primary);
+    }
+
+    .test-input-group button {
+      flex: 0 0 70px;
+      padding: 8px;
+      font-size: 12px;
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .test-input-group button:hover {
+      background: rgba(59, 130, 246, 0.4);
+    }
+
+    #status {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      min-height: 18px;
+    }
+
+    .status-pending {
+      color: #f59e0b !important;
+      font-weight: 600;
+    }
+
+    #log {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 10px;
+      font-size: 12px;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+
+    .log-item {
+      margin-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 8px;
+    }
+
+    .log-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .log-q {
+      color: #93c5fd;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .log-a {
+      color: #e2e8f0;
+      line-height: 1.4;
+    }
+
+    .config-toggle {
+      font-size: 11px;
+      color: var(--text-muted);
+      cursor: pointer;
+      text-align: right;
+      margin-bottom: 8px;
+      text-decoration: underline;
+    }
+
+    .config-panel {
+      display: none;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 12px;
+      font-size: 11px;
+    }
+
+    .config-panel.show {
+      display: block;
+    }
+
+    .config-panel label {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text-muted);
+    }
+
+    .config-panel input {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      color: white;
+      font-size: 11px;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+<div id="widget">
+  <div class="header">
+    <div class="title">🎓 Classroom Copilot</div>
+    <div class="model-badge">step-3.7-flash</div>
+  </div>
+
+  <div class="section-title">Live Transcript</div>
+  <div id="transcript">Click “Start Listening” when class begins...</div>
+
+  <div id="questionBox">
+    <div class="label">DETECTED QUESTION</div>
+    <div id="questionText"></div>
+  </div>
+
+  <div id="answerBox">
+    <div class="label"><span class="pulse-dot"></span> AI ANSWER</div>
+    <div id="answerText"></div>
+  </div>
+
+  <div class="controls">
+    <button id="toggleBtn">🎤 Start Listening</button>
+    <button id="clearBtn">🧹 Clear</button>
+  </div>
+
+  <!-- Manual Question Test -->
+  <div class="test-input-group">
+    <input type="text" id="manualQuestion" placeholder="Or type a question to test..." />
+    <button id="askManualBtn">Ask AI</button>
+  </div>
+
+  <div class="config-toggle" id="configToggle">⚙️ Advanced Settings</div>
+  <div class="config-panel" id="configPanel">
+    <label for="pauseDelay">Pause Delay after speech stops (seconds):</label>
+    <input type="number" id="pauseDelay" value="3.0" step="0.5" min="0.5" max="10" />
+
+    <label for="apiUrl">API Server Endpoint:</label>
+    <input type="text" id="apiUrl" value="http://localhost:3000/api/chat" />
+
+    <label for="apiKey">API Key:</label>
+    <input type="password" id="apiKey" value="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" />
+
+    <label for="apiModel">Model:</label>
+    <input type="text" id="apiModel" value="stepfun-ai/step-3.7-flash" />
+  </div>
+
+  <div id="status">Status: Idle</div>
+
+  <div class="section-title" style="margin-top: 10px;">Q&A History Log</div>
+  <div id="log"></div>
+</div>
+
+<script>
+  const transcriptEl  = document.getElementById('transcript');
+  const questionBoxEl = document.getElementById('questionBox');
+  const questionTextEl= document.getElementById('questionText');
+  const answerBoxEl   = document.getElementById('answerBox');
+  const answerTextEl  = document.getElementById('answerText');
+  const toggleBtn     = document.getElementById('toggleBtn');
+  const clearBtn      = document.getElementById('clearBtn');
+  const statusEl      = document.getElementById('status');
+  const logEl         = document.getElementById('log');
+
+  const manualQuestionInput = document.getElementById('manualQuestion');
+  const askManualBtn        = document.getElementById('askManualBtn');
+  const configToggle        = document.getElementById('configToggle');
+  const configPanel         = document.getElementById('configPanel');
+
+  const pauseDelayInput = document.getElementById('pauseDelay');
+  const apiUrlInput     = document.getElementById('apiUrl');
+  const apiKeyInput     = document.getElementById('apiKey');
+  const apiModelInput   = document.getElementById('apiModel');
+
+  let recognition;
+  let isListening = false;
+  let isProcessingAI = false;
+  let lastQuestion = '';
+  let partialBuffer = '';
+  let silenceTimer = null;
+  let countdownInterval = null;
+
+  // Toggle API Config Drawer
+  configToggle.onclick = () => {
+    configPanel.classList.toggle('show');
+  };
+
+  // Fetch Answer via Local Proxy or Direct Endpoint with retry logic
+  async function fetchAIAnswer(question, retries = 2) {
+    let targetUrl = apiUrlInput.value.trim();
+    const key = apiKeyInput.value.trim();
+    const model = apiModelInput.value.trim();
+
+    if (targetUrl.startsWith('/')) {
+      targetUrl = 'http://localhost:3000' + targetUrl;
+    }
+
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const response = await fetch(targetUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${key}`
+          },
+          body: JSON.stringify({
+            question: question,
+            model: model,
+            apiKey: key,
+            messages: [
+              {
+                role: 'system',
+                content: 'You are an intelligent, concise classroom AI copilot. Provide a direct, clear, and accurate answer to the user question in 2-3 sentences max.'
+              },
+              {
+                role: 'user',
+                content: question
+              }
+            ]
+          })
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+
+        const data = await response.json();
+        const aiContent = data.choices && data.choices[0] && data.choices[0].message
+          ? data.choices[0].message.content
+          : (data.error ? null : JSON.stringify(data));
+
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        if (!aiContent) {
+          throw new Error('Invalid response structure from AI model');
+        }
+
+        return aiContent.trim();
+      } catch (err) {
+        console.warn(`Attempt ${attempt + 1} failed:`, err);
+
+        if (attempt < retries) {
+          await new Promise(r => setTimeout(r, 1000));
+        } else {
+          console.error('Final AI Request Error:', err);
+          if (err.message.includes('Failed to fetch') || err.name === 'TypeError') {
+            return `⚠️ Local server unavailable. Please make sure "node server.js" is running in terminal!\n\n(Fallback: ${generateRuleBasedAnswer(question)})`;
+          }
+          return `⚠️ (API Error: ${err.message})\nFallback: ${generateRuleBasedAnswer(question)}`;
+        }
+      }
+    }
+  }
+
+  // Basic Rule-based fallback answer generator
+  function generateRuleBasedAnswer(question) {
+    const q = question.toLowerCase();
+
+    if (q.includes('what is democracy')) {
+      return 'Democracy is a form of government in which power is vested in the people, who rule either directly or through freely elected representatives.';
+    }
+    if (q.includes('fundamental right')) {
+      return 'Fundamental Rights in India are basic human freedoms guaranteed by Part III of the Constitution, such as Right to Equality, Freedom, and Constitutional Remedies.';
+    }
+    if (q.includes('preamble of the constitution')) {
+      return 'The Preamble introduces the Constitution, declaring India to be a sovereign, socialist, secular, democratic republic and stating its objectives: justice, liberty, equality, and fraternity.';
+    }
+    if (q.startsWith('what is') || q.startsWith('define')) {
+      return 'Give a crisp definition, then add 1–2 key points and, if relevant, one real-life example to show understanding.';
+    }
+    if (q.startsWith('why') || q.includes('reason')) {
+      return 'Start with the main reason in one sentence, then add 2–3 supporting points in logical order and connect them back to the question.';
+    }
+    if (q.startsWith('how') || q.includes('explain')) {
+      return 'Break your answer into steps or stages. Begin with an overview, then explain each step briefly, finishing with a short conclusion.';
+    }
+    return 'Think: 1) Definition/context, 2) 2–3 key points with examples, 3) One-line conclusion linking back to the question.';
+  }
+
+  // Detect if the text looks like a question
+  function detectQuestion(text) {
+    const t = text.trim().toLowerCase();
+    const patterns = [
+      'what is', 'who is', 'when did', 'why', 'how', 'explain', 'define',
+      'describe', 'difference between', 'short note on', 'question is'
+    ];
+
+    for (let p of patterns) {
+      if (t.includes(p)) return true;
+    }
+
+    if (t.endsWith('?') && t.split(/\s+/).length >= 3) return true;
+
+    return false;
+  }
+
+  function addToLog(question, answer) {
+    const item = document.createElement('div');
+    item.className = 'log-item';
+    item.innerHTML = `
+      <div class="log-q">Q: ${escapeHtml(question)}</div>
+      <div class="log-a">A: ${escapeHtml(answer)}</div>
+    `;
+    logEl.prepend(item);
+    while (logEl.children.length > 20) {
+      logEl.removeChild(logEl.lastChild);
+    }
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  async function processQuestion(q) {
+    if (isProcessingAI) return;
+    isProcessingAI = true;
+
+    questionBoxEl.style.display = 'block';
+    questionTextEl.textContent = q;
+
+    answerBoxEl.classList.add('show');
+    answerTextEl.innerHTML = `<em>⚡ Querying step-3.7-flash AI model...</em>`;
+
+    statusEl.className = '';
+    statusEl.textContent = 'Querying step-3.7-flash AI model...';
+
+    const answer = await fetchAIAnswer(q);
+
+    answerTextEl.textContent = answer;
+    addToLog(q, answer);
+    isProcessingAI = false;
+    statusEl.textContent = isListening ? 'Listening… keep your mic near speaker.' : 'Idle';
+  }
+
+  function clearSilenceTimer() {
+    if (silenceTimer) {
+      clearTimeout(silenceTimer);
+      silenceTimer = null;
+    }
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+    }
+  }
+
+  function scheduleQuestionDispatch(questionText) {
+    clearSilenceTimer();
+
+    const delaySec = parseFloat(pauseDelayInput.value) || 3.0;
+    let remainingMs = delaySec * 1000;
+
+    statusEl.className = 'status-pending';
+    statusEl.textContent = `⏳ Question detected! Waiting for you to finish... (${(remainingMs/1000).toFixed(1)}s)`;
+
+    countdownInterval = setInterval(() => {
+      remainingMs -= 200;
+      if (remainingMs > 0) {
+        statusEl.textContent = `⏳ Speech pause detected... Sending in ${(remainingMs/1000).toFixed(1)}s`;
+      }
+    }, 200);
+
+    silenceTimer = setTimeout(() => {
+      clearSilenceTimer();
+      if (questionText !== lastQuestion && questionText.length > 8 && !isProcessingAI) {
+        lastQuestion = questionText;
+        partialBuffer = '';
+        processQuestion(questionText);
+      }
+    }, delaySec * 1000);
+  }
+
+  // Handle Manual Question Submission
+  askManualBtn.onclick = () => {
+    const q = manualQuestionInput.value.trim();
+    if (q) {
+      clearSilenceTimer();
+      processQuestion(q);
+      manualQuestionInput.value = '';
+    }
+  };
+
+  manualQuestionInput.onkeydown = (e) => {
+    if (e.key === 'Enter') {
+      askManualBtn.click();
+    }
+  };
+
+  function initRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      statusEl.textContent = 'SpeechRecognition not supported. Use Chrome/Edge (desktop).';
+      toggleBtn.disabled = true;
+      return;
+    }
+
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-IN';
+
+    recognition.onresult = (event) => {
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          partialBuffer += ' ' + transcript;
+        } else {
+          interim += transcript;
+        }
+      }
+
+      const displayText = (partialBuffer + ' ' + interim).trim();
+      transcriptEl.textContent = displayText;
+
+      if (detectQuestion(displayText)) {
+        scheduleQuestionDispatch(displayText);
+      } else {
+        if (!isProcessingAI) {
+          clearSilenceTimer();
+          statusEl.className = '';
+          statusEl.textContent = 'Listening… keep your mic near speaker.';
+        }
+      }
+    };
+
+    recognition.onerror = (e) => {
+      clearSilenceTimer();
+      statusEl.className = '';
+      statusEl.textContent = 'Error: ' + e.error + ' (click Start again if needed)';
+      toggleBtn.disabled = false;
+      toggleBtn.classList.remove('listening');
+      toggleBtn.innerHTML = '🎤 Start Listening';
+      isListening = false;
+    };
+
+    recognition.onend = () => {
+      if (isListening) {
+        try {
+          recognition.start();
+        } catch (e) {
+          clearSilenceTimer();
+          statusEl.className = '';
+          statusEl.textContent = 'Stopped. Click Start to resume.';
+          toggleBtn.disabled = false;
+          toggleBtn.classList.remove('listening');
+          toggleBtn.innerHTML = '🎤 Start Listening';
+          isListening = false;
+        }
+      } else {
+        clearSilenceTimer();
+        statusEl.className = '';
+        statusEl.textContent = 'Stopped by user.';
+        toggleBtn.disabled = false;
+        toggleBtn.classList.remove('listening');
+        toggleBtn.innerHTML = '🎤 Start Listening';
+        isListening = false;
+      }
+    };
+  }
+
+  toggleBtn.onclick = () => {
+    if (!recognition) initRecognition();
+    if (!recognition) return;
+
+    if (isListening) {
+      isListening = false;
+      clearSilenceTimer();
+      recognition.stop();
+      toggleBtn.classList.remove('listening');
+      toggleBtn.innerHTML = '🎤 Start Listening';
+      statusEl.className = '';
+      statusEl.textContent = 'Stopped by user.';
+    } else {
+      try {
+        isListening = true;
+        recognition.start();
+        toggleBtn.classList.add('listening');
+        toggleBtn.innerHTML = '🛑 Stop Listening';
+        statusEl.className = '';
+        statusEl.textContent = 'Listening… keep your mic near speaker.';
+      } catch (e) {
+        statusEl.textContent = 'Could not start: ' + e.message;
+        isListening = false;
+      }
+    }
+  };
+
+  clearBtn.onclick = () => {
+    logEl.innerHTML = '';
+    clearSilenceTimer();
+    questionBoxEl.style.display = 'none';
+    answerBoxEl.classList.remove('show');
+    transcriptEl.textContent = 'Log cleared. Listening continues if mic is on.';
+  };
+
+  initRecognition();
+</script>
+</body>
+</html>

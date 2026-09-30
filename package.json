@@ -1,0 +1,12 @@
+{
+  "name": "question-detector",
+  "version": "1.0.0",
+  "description": "Classroom Copilot - Question Detector AI (static page + Node proxy server)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
